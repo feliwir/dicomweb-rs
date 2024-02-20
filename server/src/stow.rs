@@ -41,6 +41,10 @@ pub async fn store_instances(
         .map(|dcm| dcm.into_inner())
         .collect();
 
+    for dcm in &mut dcm_list {
+        dcm.remove_element(tags::PIXEL_DATA);
+    }
+
     let dcm_json = DicomJson::from(dcm_list);
     HttpResponse::Ok().json(dcm_json)
 }
