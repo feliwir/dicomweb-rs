@@ -1,5 +1,6 @@
 use dicom::object::InMemDicomObject;
 
+mod multipart;
 mod qido;
 mod stow;
 mod wado;

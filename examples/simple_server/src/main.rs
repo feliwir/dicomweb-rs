@@ -1,12 +1,9 @@
 use std::{env, fs};
 
 use actix_web::{web, App, HttpServer};
-use dicom::object::InMemDicomObject;
+use dicom::{dictionary_std::tags, object::InMemDicomObject};
 use dicom_object::FileDicomObject;
-use dicomweb_server::{
-    dicomweb_config, QidoInstanceQuery, QidoSeriesQuery,
-    QidoStudyQuery,
-};
+use dicomweb_server::{dicomweb_config, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery};
 
 fn search_study(
     _query: &QidoStudyQuery,
@@ -34,9 +31,9 @@ fn store_instances(
 ) -> Result<(), Box<dyn std::error::Error>> {
     print!("");
     for instance in instances {
-        let study_uid = instance.element_by_name("StudyInstanceUID")?.to_str()?;
-        let series_uid = instance.element_by_name("SeriesInstanceUID")?.to_str()?;
-        let sop_uid = instance.element_by_name("SOPInstanceUID")?.to_str()?;
+        let study_uid = instance.element(tags::STUDY_INSTANCE_UID)?.to_str()?;
+        let series_uid = instance.element(tags::SERIES_INSTANCE_UID)?.to_str()?;
+        let sop_uid = instance.element(tags::SOP_INSTANCE_UID)?.to_str()?;
         fs::create_dir_all(format!("data/{}/{}/", study_uid, series_uid))?;
         instance.write_to_file(format!("data/{}/{}/{}.dcm", study_uid, series_uid, sop_uid))?;
     }
