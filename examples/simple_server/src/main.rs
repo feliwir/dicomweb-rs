@@ -4,11 +4,44 @@ use actix_web::{web, App, HttpServer};
 use dicom::{dictionary_std::tags, object::InMemDicomObject};
 use dicom_object::FileDicomObject;
 use dicomweb_server::{dicomweb_config, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery};
+use walkdir::WalkDir;
+
+const DATA_DIR: &str = "data";
+
+fn get_all_data_files() -> Vec<String> {
+    let mut files = Vec::new();
+    for entry in WalkDir::new(DATA_DIR) {
+        let entry = entry.unwrap();
+        files.push(entry.path().to_str().unwrap().to_string());
+    }
+    files
+}
 
 fn search_study(
     _query: &QidoStudyQuery,
 ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>> {
-    unimplemented!()
+    // Collect all files in the data directory
+    let files = get_all_data_files();
+    let mut dcm_files = Vec::new();
+    for file in files {
+        dcm_files.push(FileDicomObject::open_file(&file)?.into_inner());
+    }
+
+    // Remove objects with duplicate study instance UID
+    dcm_files.sort_by(|a, b| {
+        a.element(tags::STUDY_INSTANCE_UID)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .cmp(
+                &b.element(tags::STUDY_INSTANCE_UID)
+                    .unwrap()
+                    .to_str()
+                    .unwrap(),
+            )
+    });
+
+    Ok(dcm_files)
 }
 
 fn search_series(

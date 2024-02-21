@@ -3,6 +3,7 @@ use dicom::object::InMemDicomObject;
 mod multipart;
 mod qido;
 mod stow;
+mod tags;
 mod wado;
 
 use dicom_object::FileDicomObject;

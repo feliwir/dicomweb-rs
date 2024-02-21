@@ -1,7 +1,7 @@
-
 use actix_web::{
     post,
-    web::{self}, HttpMessage, HttpRequest, HttpResponse, Responder,
+    web::{self, Payload},
+    FromRequest, HttpMessage, HttpRequest, HttpResponse, Responder,
 };
 use dicom::dictionary_std::tags;
 use dicom_json::DicomJson;
@@ -12,15 +12,18 @@ use crate::{multipart::MultipartRelated, DicomWebServer};
 
 async fn collect_dicom_files(
     request: HttpRequest,
-    mut payload: MultipartRelated,
+    payload: Payload,
 ) -> Result<Vec<FileDicomObject<InMemDicomObject>>, String> {
     let content_type = request.content_type();
     let mut dicom_files = Vec::new();
 
     // Check if the content type is multipart/related
     if content_type == "multipart/related" {
+        let mut multipart = MultipartRelated::from_request(&request, &mut payload.into_inner())
+            .await
+            .map_err(|e| e.to_string())?;
         // iterate over multipart stream
-        while let Some(item) = payload.next().await {
+        while let Some(item) = multipart.next().await {
             let mut obj = match item {
                 Ok(obj) => obj,
                 Err(e) => return Err(e.to_string()),
@@ -68,10 +71,15 @@ async fn collect_dicom_files(
 #[post("/studies")]
 pub async fn store_instances(
     request: HttpRequest,
-    payload: MultipartRelated,
+    payload: Payload,
     callbacks: web::Data<DicomWebServer>,
     // MultipartForm(form): MultipartForm<InstancesUpload>,
 ) -> impl Responder {
+    // Check if the content type is multipart/related
+    if request.content_type() != "multipart/related" {
+        return  HttpResponse::UnsupportedMediaType().body("Unsupported media type");
+    }
+
     // Collect the DICOM files
     let dicom_files = match collect_dicom_files(request, payload).await {
         Ok(dicom_files) => dicom_files,
