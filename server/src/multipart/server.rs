@@ -18,7 +18,6 @@ use actix_web::{
 use futures_util::stream::{LocalBoxStream, Stream};
 use local_waker::LocalWaker;
 
-
 const MAX_HEADERS: usize = 32;
 
 /// The server-side implementation of `multipart/related` requests.

@@ -43,6 +43,8 @@ async fn collect_dicom_files(
                             }
                         }
                         dicom_files.push(FileDicomObject::from_reader(data.as_slice()));
+                    } else {
+                        return Err(format!("Unsupported content type: {}", inner_content_type));
                     }
                 }
                 None => return Err(String::from("Missing content type")),
@@ -77,7 +79,7 @@ pub async fn store_instances(
 ) -> impl Responder {
     // Check if the content type is multipart/related
     if request.content_type() != "multipart/related" {
-        return  HttpResponse::UnsupportedMediaType().body("Unsupported media type");
+        return HttpResponse::UnsupportedMediaType().body("Unsupported media type");
     }
 
     // Collect the DICOM files

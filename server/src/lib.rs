@@ -1,12 +1,11 @@
-use dicom::object::InMemDicomObject;
+use dicom::{dictionary_std::tags, object::InMemDicomObject};
 
 mod multipart;
 mod qido;
 mod stow;
-mod tags;
 mod wado;
 
-use dicom_object::FileDicomObject;
+use dicom_object::{FileDicomObject, Tag};
 use qido::*;
 use stow::*;
 use wado::*;
@@ -22,11 +21,42 @@ pub struct DicomWebServer {
         fn(&QidoStudyQuery) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
     pub search_series:
         fn(&str, &QidoSeriesQuery) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
-    pub search_instance:
-        fn(&str, &str, &QidoInstanceQuery) -> Result<InMemDicomObject, Box<dyn std::error::Error>>,
+    pub search_instance: fn(
+        &str,
+        &str,
+        &QidoInstanceQuery,
+    ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
     pub store_instances:
         fn(&Vec<FileDicomObject<InMemDicomObject>>) -> Result<(), Box<dyn std::error::Error>>,
 }
+
+// http://dicom.nema.org/medical/dicom/current/output/chtml/part18/sect_10.6.html#table_10.6.1-5
+pub const STUDY_TAGS: [Tag; 9] = [
+    tags::STUDY_DATE,
+    tags::STUDY_TIME,
+    tags::ACCESSION_NUMBER,
+    tags::MODALITIES_IN_STUDY,
+    tags::REFERRING_PHYSICIAN_NAME,
+    tags::PATIENT_NAME,
+    tags::PATIENT_ID,
+    tags::STUDY_INSTANCE_UID,
+    tags::STUDY_ID,
+];
+
+pub const SERIES_TAGS: [Tag; 6] = [
+    tags::MODALITY,
+    tags::SERIES_INSTANCE_UID,
+    tags::SERIES_NUMBER,
+    tags::PERFORMED_PROCEDURE_STEP_START_DATE,
+    tags::PERFORMED_PROCEDURE_STEP_START_TIME,
+    tags::REQUEST_ATTRIBUTES_SEQUENCE,
+];
+
+pub const INSTANCE_TAGS: [Tag; 3] = [
+    tags::SOP_CLASS_UID,
+    tags::SOP_INSTANCE_UID,
+    tags::INSTANCE_NUMBER,
+];
 
 pub fn dicomweb_config(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(store_instances)

@@ -11,4 +11,5 @@ dicom = "0.6.3"
 dicom-object = "0.6.3"
 dicomweb-server = {path = "../../server"}
 env_logger = "0.11.2"
+itertools = "0.12.1"
 walkdir = "2.4.0"
