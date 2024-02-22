@@ -8,8 +8,8 @@ use dicom::{
 };
 use dicom_object::FileDicomObject;
 use dicomweb_server::{
-    dicomweb_config, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery, INSTANCE_TAGS,
-    SERIES_TAGS, STUDY_TAGS,
+    dicomweb_config, study_filter, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery,
+    INSTANCE_TAGS, SERIES_TAGS, STUDY_TAGS,
 };
 use itertools::Itertools;
 use walkdir::WalkDir;
@@ -28,11 +28,6 @@ fn get_all_data_files() -> Vec<String> {
     files
 }
 
-fn is_study_filtered(_dcm: &InMemDicomObject, _query: &QidoStudyQuery) -> bool {
-    // TODO:
-    false
-}
-
 fn search_study(
     query: &QidoStudyQuery,
 ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>> {
@@ -45,10 +40,10 @@ fn search_study(
 
     let studys = dcm_files
         .iter()
+        // Apply the filter parameters
+        .filter(|dcm| study_filter(dcm, query))
         // Only keep one instance per study
         .unique_by(|dcm| dcm.get(tags::STUDY_INSTANCE_UID).unwrap().to_str().unwrap())
-        // Check if the study is filtered
-        .filter(|dcm| !is_study_filtered(dcm, query))
         // Only keep the study tags
         .map(|dcm| {
             let mut study = InMemDicomObject::from_element_iter(
@@ -86,7 +81,7 @@ fn is_series_filtered(_dcm: &InMemDicomObject, _query: &QidoSeriesQuery) -> bool
 }
 
 fn search_series(
-    study_uid: &str,
+    study_uid: Option<&str>,
     query: &QidoSeriesQuery,
 ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>> {
     // Collect all files in the data directory
@@ -100,11 +95,15 @@ fn search_series(
         .iter()
         // Only keep the instances of the study
         .filter(|dcm| {
+            if study_uid.is_none() {
+                return true;
+            }
+
             dcm.element(tags::STUDY_INSTANCE_UID)
                 .unwrap()
                 .to_str()
                 .unwrap()
-                == study_uid
+                == study_uid.unwrap()
         })
         // Only keep one instance per series
         .unique_by(|dcm| {
@@ -155,9 +154,9 @@ fn is_instance_filtered(_dcm: &InMemDicomObject, _query: &QidoInstanceQuery) -> 
     false
 }
 
-fn search_instance(
-    study_uid: &str,
-    series_uid: &str,
+fn search_instances(
+    study_uid: Option<&str>,
+    series_uid: Option<&str>,
     query: &QidoInstanceQuery,
 ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>> {
     // Collect all files in the data directory
@@ -171,19 +170,27 @@ fn search_instance(
         .iter()
         // Only keep the instances of the study
         .filter(|dcm| {
+            if study_uid.is_none() {
+                return true;
+            }
+
             dcm.element(tags::STUDY_INSTANCE_UID)
                 .unwrap()
                 .to_str()
                 .unwrap()
-                == study_uid
+                == study_uid.unwrap()
         })
         // Only keep the instances of the series
         .filter(|dcm| {
+            if series_uid.is_none() {
+                return true;
+            }
+
             dcm.element(tags::SERIES_INSTANCE_UID)
                 .unwrap()
                 .to_str()
                 .unwrap()
-                == series_uid
+                == series_uid.unwrap()
         })
         // This should already be the case - it should not be possible to have multiple files with the same SOP Instance UID
         .unique_by(|dcm| dcm.get(tags::SOP_INSTANCE_UID).unwrap().to_str().unwrap())
@@ -250,7 +257,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .app_data(web::Data::new(dicomweb_server::DicomWebServer {
-                search_instance: search_instance,
+                search_instances: search_instances,
                 search_series: search_series,
                 search_study: search_study,
                 store_instances: store_instances,

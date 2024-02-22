@@ -1,5 +1,6 @@
 use dicom::{dictionary_std::tags, object::InMemDicomObject};
 
+mod filter;
 mod multipart;
 mod qido;
 mod stow;
@@ -10,6 +11,7 @@ use qido::*;
 use stow::*;
 use wado::*;
 
+pub use filter::study_filter;
 pub use qido::{qido_config, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery};
 pub use stow::stow_config;
 pub use wado::wado_config;
@@ -19,11 +21,13 @@ pub use wado::wado_config;
 pub struct DicomWebServer {
     pub search_study:
         fn(&QidoStudyQuery) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
-    pub search_series:
-        fn(&str, &QidoSeriesQuery) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
-    pub search_instance: fn(
-        &str,
-        &str,
+    pub search_series: fn(
+        Option<&str>,
+        &QidoSeriesQuery,
+    ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
+    pub search_instances: fn(
+        Option<&str>,
+        Option<&str>,
         &QidoInstanceQuery,
     ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
     pub store_instances:
@@ -63,7 +67,9 @@ pub fn dicomweb_config(cfg: &mut actix_web::web::ServiceConfig) {
         .service(store_instances_for_study)
         .service(search_studies)
         .service(search_series)
+        .service(search_series_all)
         .service(search_instances)
+        .service(search_instances_all)
         .service(retrieve_instance)
         .service(retrieve_series)
         .service(retrieve_study);
