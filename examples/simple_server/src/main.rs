@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-use actix_web::{web, App, HttpServer};
+use actix_web::{middleware, web, App, HttpServer};
 use dicom::{
     core::{DataElement, PrimitiveValue},
     dictionary_std::tags,
@@ -235,6 +235,52 @@ fn search_instances(
     Ok(instances)
 }
 
+fn retrieve_instance(
+    study_uid: &str,
+    series_uid: &str,
+    sop_instance_uid: &str,
+) -> Result<FileDicomObject<InMemDicomObject>, Box<dyn std::error::Error>> {
+    let files = get_all_data_files();
+    let dcm_files = files
+        .iter()
+        .filter(|file| {
+            let dcm = FileDicomObject::open_file(file).unwrap().into_inner();
+            if dcm
+                .element(tags::STUDY_INSTANCE_UID)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                != study_uid
+            {
+                return false;
+            }
+
+            if dcm
+                .element(tags::SERIES_INSTANCE_UID)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                != series_uid
+            {
+                return false;
+            }
+
+            dcm.element(tags::SOP_INSTANCE_UID)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                == sop_instance_uid
+        })
+        .collect::<Vec<_>>();
+
+    if dcm_files.len() == 0 {
+        return Err("No instance found".into());
+    }
+
+    let dcm = FileDicomObject::open_file(dcm_files[0])?;
+    Ok(dcm)
+}
+
 fn store_instances(
     instances: &Vec<FileDicomObject<InMemDicomObject>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -256,10 +302,12 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(|| {
         App::new()
+            .wrap(middleware::Compress::default())
             .app_data(web::Data::new(dicomweb_server::DicomWebServer {
                 search_instances: search_instances,
                 search_series: search_series,
                 search_study: search_study,
+                retrieve_instance: retrieve_instance,
                 store_instances: store_instances,
             }))
             .configure(dicomweb_config)

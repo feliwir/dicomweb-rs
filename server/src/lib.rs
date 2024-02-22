@@ -22,14 +22,20 @@ pub struct DicomWebServer {
     pub search_study:
         fn(&QidoStudyQuery) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
     pub search_series: fn(
-        Option<&str>,
+        Option<&str>, // study_instance_uid
         &QidoSeriesQuery,
     ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
     pub search_instances: fn(
-        Option<&str>,
-        Option<&str>,
+        Option<&str>, // study_instance_uid
+        Option<&str>, // series_instance_uid
         &QidoInstanceQuery,
     ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
+    pub retrieve_instance:
+        fn(
+            &str, // study_instance_uid
+            &str, // series_instance_uid
+            &str, // sop_instance_uid
+        ) -> Result<FileDicomObject<InMemDicomObject>, Box<dyn std::error::Error>>,
     pub store_instances:
         fn(&Vec<FileDicomObject<InMemDicomObject>>) -> Result<(), Box<dyn std::error::Error>>,
 }
