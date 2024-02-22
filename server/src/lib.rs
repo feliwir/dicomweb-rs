@@ -65,11 +65,12 @@ pub const INSTANCE_TAGS: [Tag; 3] = [
 pub fn dicomweb_config(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(store_instances)
         .service(store_instances_for_study)
-        .service(search_studies)
-        .service(search_series)
+        .service(search_studies_all)
         .service(search_series_all)
-        .service(search_instances)
+        .service(search_series_study_level)
         .service(search_instances_all)
+        .service(search_instances_study_level)
+        .service(search_instances_series_level)
         .service(retrieve_instance)
         .service(retrieve_series)
         .service(retrieve_study);
