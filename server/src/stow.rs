@@ -8,7 +8,7 @@ use dicom_json::DicomJson;
 use dicom_object::{FileDicomObject, InMemDicomObject};
 use futures_util::StreamExt;
 
-use crate::{multipart::MultipartRelated, DicomWebServer};
+use crate::{multipart::MultipartReader, DicomWebServer};
 
 async fn collect_dicom_files(
     request: HttpRequest,
@@ -19,7 +19,7 @@ async fn collect_dicom_files(
 
     // Check if the content type is multipart/related
     if content_type == "multipart/related" {
-        let mut multipart = MultipartRelated::from_request(&request, &mut payload.into_inner())
+        let mut multipart = MultipartReader::from_request(&request, &mut payload.into_inner())
             .await
             .map_err(|e| e.to_string())?;
         // iterate over multipart stream

@@ -1,4 +1,4 @@
-//! MultipartRelated response payload support.
+//! MultipartReader response payload support.
 
 use std::{
     cell::{Cell, RefCell, RefMut},
@@ -24,9 +24,9 @@ const MAX_HEADERS: usize = 32;
 ///
 /// This will parse the incoming stream into `MultipartItem` instances via its
 /// Stream implementation.
-/// `MultipartItem::Object` contains multipart field. `MultipartItem::MultipartRelated`
+/// `MultipartItem::Object` contains multipart field. `MultipartItem::MultipartReader`
 /// is used for nested multipart streams.
-pub struct MultipartRelated {
+pub struct MultipartReader {
     safety: Safety,
     error: Option<MultipartError>,
     inner: Option<InnerMultipart>,
@@ -59,15 +59,15 @@ struct InnerMultipart {
     item: InnerMultipartItem,
 }
 
-impl MultipartRelated {
+impl MultipartReader {
     /// Create multipart instance for boundary.
-    pub fn new<S>(headers: &HeaderMap, stream: S) -> MultipartRelated
+    pub fn new<S>(headers: &HeaderMap, stream: S) -> MultipartReader
     where
         S: Stream<Item = Result<Bytes, PayloadError>> + 'static,
     {
         match Self::boundary(headers) {
-            Ok(boundary) => MultipartRelated::from_boundary(boundary, stream),
-            Err(err) => MultipartRelated::from_error(err),
+            Ok(boundary) => MultipartReader::from_boundary(boundary, stream),
+            Err(err) => MultipartReader::from_error(err),
         }
     }
 
@@ -86,11 +86,11 @@ impl MultipartRelated {
     }
 
     /// Create multipart instance for given boundary and stream
-    pub(crate) fn from_boundary<S>(boundary: String, stream: S) -> MultipartRelated
+    pub(crate) fn from_boundary<S>(boundary: String, stream: S) -> MultipartReader
     where
         S: Stream<Item = Result<Bytes, PayloadError>> + 'static,
     {
-        MultipartRelated {
+        MultipartReader {
             error: None,
             safety: Safety::new(),
             inner: Some(InnerMultipart {
@@ -102,9 +102,9 @@ impl MultipartRelated {
         }
     }
 
-    /// Create MultipartRelated instance from MultipartError
-    pub(crate) fn from_error(err: MultipartError) -> MultipartRelated {
-        MultipartRelated {
+    /// Create MultipartReader instance from MultipartError
+    pub(crate) fn from_error(err: MultipartError) -> MultipartReader {
+        MultipartReader {
             error: Some(err),
             safety: Safety::new(),
             inner: None,
@@ -112,7 +112,7 @@ impl MultipartRelated {
     }
 }
 
-impl Stream for MultipartRelated {
+impl Stream for MultipartReader {
     type Item = Result<Object, MultipartError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -135,7 +135,7 @@ impl Stream for MultipartRelated {
             None => Poll::Ready(Some(Err(this
                 .error
                 .take()
-                .expect("MultipartRelated polled after finish")))),
+                .expect("MultipartReader polled after finish")))),
         }
     }
 }
@@ -679,7 +679,7 @@ impl Clone for PayloadRef {
 
 /// Counter. It tracks of number of clones of payloads and give access to payload only to top most.
 /// * When dropped, parent task is awakened. This is to support the case where Object is
-/// dropped in a separate task than MultipartRelated.
+/// dropped in a separate task than MultipartReader.
 /// * Assumes that parent owners don't move to different tasks; only the top-most is allowed to.
 /// * If dropped and is not top most owner, is_clean flag is set to false.
 #[derive(Debug)]
@@ -725,7 +725,7 @@ impl Safety {
 impl Drop for Safety {
     fn drop(&mut self) {
         if Rc::strong_count(&self.payload) != self.level {
-            // MultipartRelated dropped leaving a Object
+            // MultipartReader dropped leaving a Object
             self.clean.set(false);
         }
 
