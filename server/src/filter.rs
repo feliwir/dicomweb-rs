@@ -1,8 +1,8 @@
-use dicom::dictionary_std::tags;
+
 use dicom_object::InMemDicomObject;
 
 use crate::QidoStudyQuery;
 
-pub fn study_filter(dcm: &InMemDicomObject, query: &QidoStudyQuery) -> bool {
+pub fn study_filter(_dcm: &InMemDicomObject, _query: &QidoStudyQuery) -> bool {
     true
 }

@@ -30,6 +30,15 @@ pub struct DicomWebServer {
         Option<&str>, // series_instance_uid
         &QidoInstanceQuery,
     ) -> Result<Vec<InMemDicomObject>, Box<dyn std::error::Error>>,
+    pub retrieve_study:
+        fn(
+            &str, // study_instance_uid
+        ) -> Result<Vec<FileDicomObject<InMemDicomObject>>, Box<dyn std::error::Error>>,
+    pub retrieve_series:
+        fn(
+            &str, // study_instance_uid
+            &str, // series_instance_uid
+        ) -> Result<Vec<FileDicomObject<InMemDicomObject>>, Box<dyn std::error::Error>>,
     pub retrieve_instance:
         fn(
             &str, // study_instance_uid

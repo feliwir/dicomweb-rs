@@ -235,6 +235,57 @@ fn search_instances(
     Ok(instances)
 }
 
+fn retrieve_study(
+    study_uid: &str,
+) -> Result<Vec<FileDicomObject<InMemDicomObject>>, Box<dyn std::error::Error>> {
+    let files = get_all_data_files();
+    let dcm_files = files
+        .iter()
+        .filter(|file| {
+            let dcm = FileDicomObject::open_file(file).unwrap().into_inner();
+            dcm.element(tags::STUDY_INSTANCE_UID)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                == study_uid
+        })
+        .map(|file| FileDicomObject::open_file(file))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(dcm_files)
+}
+
+fn retrieve_series(
+    study_uid: &str,
+    series_uid: &str,
+) -> Result<Vec<FileDicomObject<InMemDicomObject>>, Box<dyn std::error::Error>> {
+    let files = get_all_data_files();
+    let dcm_files = files
+        .iter()
+        .filter(|file| {
+            let dcm = FileDicomObject::open_file(file).unwrap().into_inner();
+            if dcm
+                .element(tags::STUDY_INSTANCE_UID)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                != study_uid
+            {
+                return false;
+            }
+
+            dcm.element(tags::SERIES_INSTANCE_UID)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                == series_uid
+        })
+        .map(|file| FileDicomObject::open_file(file))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(dcm_files)
+}
+
 fn retrieve_instance(
     study_uid: &str,
     series_uid: &str,
@@ -307,6 +358,8 @@ async fn main() -> std::io::Result<()> {
                 search_instances: search_instances,
                 search_series: search_series,
                 search_study: search_study,
+                retrieve_study: retrieve_study,
+                retrieve_series: retrieve_series,
                 retrieve_instance: retrieve_instance,
                 store_instances: store_instances,
             }))
