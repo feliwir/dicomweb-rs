@@ -1,8 +1,9 @@
+use actix_web::http::header::HeaderMap;
 use std::io::{self, Read, Write};
 use uuid::Uuid;
 
 pub struct MultipartWriter {
-    boundary: String,
+    pub boundary: String,
     pub data: Vec<u8>,
     first: bool,
 }
@@ -24,7 +25,7 @@ impl MultipartWriter {
         }
     }
 
-    pub fn add(self: &mut Self, reader: &mut dyn Read) -> io::Result<u64> {
+    pub fn add(self: &mut Self, mut reader: impl Read, headers: &str) -> io::Result<u64> {
         // writer for the result
         let mut writer = std::io::BufWriter::new(&mut self.data);
 
@@ -37,7 +38,14 @@ impl MultipartWriter {
         writer.write_all(self.boundary.as_bytes()).unwrap();
         writer.write_all(b"\r\n").unwrap();
 
+        // write the content type
+        writer.write_all(headers.as_bytes()).unwrap();
+
+        // write an empty line
+        writer.write_all(b"\r\n").unwrap();
+        writer.write_all(b"\r\n").unwrap();
+
         // write the content
-        io::copy(reader, &mut writer)
+        io::copy(&mut reader, &mut writer)
     }
 }
