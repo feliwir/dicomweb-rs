@@ -7,7 +7,7 @@ use dicom::{
 };
 use dicom_object::FileDicomObject;
 use dicomweb_server::{
-    dicomweb_config, study_filter, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery,
+    actix::dicomweb_config, study_filter, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery,
     INSTANCE_TAGS, SERIES_TAGS, STUDY_TAGS,
 };
 use itertools::Itertools;

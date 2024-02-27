@@ -2,7 +2,7 @@ use std::io::Write;
 
 use actix_web::{get, web, HttpResponse, Responder};
 
-use crate::{multipart::MultipartWriter, DicomWebServer};
+use crate::{actix::MultipartWriter, DicomWebServer};
 
 /// WADO-RS
 ///

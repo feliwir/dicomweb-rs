@@ -5,11 +5,16 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["actix"]
+actix = ["dep:actix-web", "dep:actix-multipart", "dep:actix-utils"]
+
 [dependencies]
-actix-multipart = "0.6.1"
-actix-utils = "3.0.1"
-actix-web = "4.5.1"
+actix-multipart = { version = "0.6.1", optional = true }
+actix-utils = { version = "3.0.1", optional = true }
+actix-web = { version = "4.5.1", optional = true }
 bytes = "1.5.0"
+derive_more = "0.99.17"
 dicom = "0.6.3"
 dicom-json = "0.1.1"
 dicom-object = "0.6.3"

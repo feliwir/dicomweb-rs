@@ -1,20 +1,48 @@
 use dicom::{dictionary_std::tags, object::InMemDicomObject};
+use serde::Deserialize;
 
 mod filter;
-mod multipart;
-mod qido;
-mod stow;
-mod wado;
 
 use dicom_object::{FileDicomObject, Tag};
-use qido::*;
-use stow::*;
-use wado::*;
 
 pub use filter::study_filter;
-pub use qido::{qido_config, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery};
-pub use stow::stow_config;
-pub use wado::wado_config;
+
+#[cfg(feature = "actix")]
+pub mod actix;
+
+/// QIDO-RS
+///
+/// See https://www.dicomstandard.org/using/dicomweb/query-qido-rs for more information
+/// More detail can be found in PS3.18 10.6.
+#[derive(Deserialize, Debug)]
+pub struct QidoStudyQuery {
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+    pub fuzzymatching: Option<bool>,
+    #[serde(skip_deserializing)]
+    pub includefields: Vec<String>,
+    #[serde(skip_deserializing)]
+    pub matches: Vec<(Tag, String)>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct QidoSeriesQuery {
+    limit: Option<usize>,
+    offset: Option<usize>,
+    includefield: Option<String>,
+    modality: Option<String>,
+    series_instance_uid: Option<String>,
+    series_description: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct QidoInstanceQuery {
+    limit: Option<usize>,
+    offset: Option<usize>,
+    includefield: Option<String>,
+    sop_instance_uid: Option<String>,
+    instance_number: Option<String>,
+}
 
 /// DICOMWeb Server
 /// Provide the callbacks for the QIDO-RS and WADO-RS endpoints.
@@ -76,17 +104,3 @@ pub const INSTANCE_TAGS: [Tag; 3] = [
     tags::SOP_INSTANCE_UID,
     tags::INSTANCE_NUMBER,
 ];
-
-pub fn dicomweb_config(cfg: &mut actix_web::web::ServiceConfig) {
-    cfg.service(store_instances)
-        .service(store_instances_for_study)
-        .service(search_studies_all)
-        .service(search_series_all)
-        .service(search_series_study_level)
-        .service(search_instances_all)
-        .service(search_instances_study_level)
-        .service(search_instances_series_level)
-        .service(retrieve_instance)
-        .service(retrieve_series)
-        .service(retrieve_study);
-}

@@ -1,24 +1,8 @@
 use actix_web::{get, web, HttpResponse, Responder};
 use dicom_json::DicomJson;
-use dicom_object::{InMemDicomObject, Tag};
-use serde::Deserialize;
+use dicom_object::InMemDicomObject;
 
-use crate::DicomWebServer;
-
-/// QIDO-RS
-///
-/// See https://www.dicomstandard.org/using/dicomweb/query-qido-rs for more information
-/// More detail can be found in PS3.18 10.6.
-#[derive(Deserialize, Debug)]
-pub struct QidoStudyQuery {
-    pub limit: Option<usize>,
-    pub offset: Option<usize>,
-    pub fuzzymatching: Option<bool>,
-    #[serde(skip_deserializing)]
-    pub includefields: Vec<String>,
-    #[serde(skip_deserializing)]
-    pub matches: Vec<(Tag, String)>,
-}
+use crate::{DicomWebServer, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery};
 
 #[get("/studies")]
 pub async fn search_studies_all(
@@ -43,16 +27,6 @@ pub async fn search_studies_all(
         }
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct QidoSeriesQuery {
-    limit: Option<usize>,
-    offset: Option<usize>,
-    includefield: Option<String>,
-    modality: Option<String>,
-    series_instance_uid: Option<String>,
-    series_description: Option<String>,
 }
 
 #[get("/studies/{study_uid}/series")]
@@ -130,15 +104,6 @@ pub async fn search_series_all(
         }
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct QidoInstanceQuery {
-    limit: Option<usize>,
-    offset: Option<usize>,
-    includefield: Option<String>,
-    sop_instance_uid: Option<String>,
-    instance_number: Option<String>,
 }
 
 #[get("/studies/{study_uid}/series/{series_uid}/instances")]

@@ -8,7 +8,9 @@ use dicom_json::DicomJson;
 use dicom_object::{FileDicomObject, InMemDicomObject};
 use futures_util::StreamExt;
 
-use crate::{multipart::MultipartReader, DicomWebServer};
+use crate::DicomWebServer;
+
+use super::MultipartReader;
 
 async fn collect_dicom_files(
     request: HttpRequest,

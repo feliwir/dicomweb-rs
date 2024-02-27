@@ -3,7 +3,7 @@
 use actix_utils::future::{ready, Ready};
 use actix_web::{dev::Payload, Error, FromRequest, HttpRequest};
 
-use crate::multipart::MultipartReader;
+use super::MultipartReader;
 
 impl FromRequest for MultipartReader {
     type Error = Error;
