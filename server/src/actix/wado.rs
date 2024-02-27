@@ -1,6 +1,9 @@
 use std::io::Write;
 
 use actix_web::{get, web, HttpResponse, Responder};
+use dicom::dictionary_std::tags;
+use dicom_json::DicomJson;
+use dicom_object::InMemDicomObject;
 
 use crate::{actix::MultipartWriter, DicomWebServer};
 
@@ -41,6 +44,32 @@ pub async fn retrieve_study(
     }
 }
 
+#[get("/studies/{study_uid}/metadata")]
+pub async fn retrieve_study_metadata(
+    callbacks: web::Data<DicomWebServer>,
+    study_uid: web::Path<String>,
+) -> impl Responder {
+    let result = (callbacks.retrieve_study)(&study_uid);
+
+    match result {
+        Ok(dcm_files) => {
+            // Apply the offset and the filter
+            let mut filtered: Vec<InMemDicomObject> = dcm_files
+                .into_iter()
+                .map(|dcm_file| dcm_file.into_inner())
+                .collect();
+
+            // Remove any bulk data
+            for dcm in &mut filtered {
+                dcm.remove_element(tags::PIXEL_DATA);
+            }
+
+            return HttpResponse::Ok().json(DicomJson::from(filtered));
+        }
+        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+    }
+}
+
 #[get("/studies/{study_uid}/series/{series_uid}")]
 pub async fn retrieve_series(
     callbacks: web::Data<DicomWebServer>,
@@ -71,6 +100,33 @@ pub async fn retrieve_series(
             );
 
             return HttpResponse::Ok().content_type(content_type).body(mp.data);
+        }
+        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+    }
+}
+
+#[get("/studies/{study_uid}/series/{series_uid}/metadata")]
+pub async fn retrieve_series_metadata(
+    callbacks: web::Data<DicomWebServer>,
+    path: web::Path<(String, String)>,
+) -> impl Responder {
+    let (study_uid, series_uid) = path.into_inner();
+    let result = (callbacks.retrieve_series)(&study_uid, &series_uid);
+
+    match result {
+        Ok(dcm_files) => {
+            // Apply the offset and the filter
+            let mut filtered: Vec<InMemDicomObject> = dcm_files
+                .into_iter()
+                .map(|dcm_file| dcm_file.into_inner())
+                .collect();
+
+            // Remove any bulk data
+            for dcm in &mut filtered {
+                dcm.remove_element(tags::PIXEL_DATA);
+            }
+
+            return HttpResponse::Ok().json(DicomJson::from(filtered));
         }
         Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
     }
@@ -109,8 +165,30 @@ pub async fn retrieve_instance(
     }
 }
 
+#[get("/studies/{study_uid}/series/{series_uid}/instances/{instance_uid}/metadata")]
+pub async fn retrieve_instance_metadata(
+    callbacks: web::Data<DicomWebServer>,
+    path: web::Path<(String, String, String)>,
+) -> impl Responder {
+    let (study_uid, series_uid, instance_uid) = path.into_inner();
+    let result = (callbacks.retrieve_instance)(&study_uid, &series_uid, &instance_uid);
+
+    match result {
+        Ok(mut dcm_file) => {
+            // Remove any bulkdata from the DICOM file
+            dcm_file.remove_element(tags::PIXEL_DATA);
+
+            return HttpResponse::Ok().json(DicomJson::from(dcm_file));
+        }
+        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+    }
+}
+
 pub fn wado_config(cfg: &mut web::ServiceConfig) {
     cfg.service(retrieve_study)
+        .service(retrieve_study_metadata)
         .service(retrieve_series)
-        .service(retrieve_instance);
+        .service(retrieve_series_metadata)
+        .service(retrieve_instance)
+        .service(retrieve_instance_metadata);
 }

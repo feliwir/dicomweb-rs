@@ -23,6 +23,9 @@ pub fn dicomweb_config(cfg: &mut actix_web::web::ServiceConfig) {
         .service(search_instances_study_level)
         .service(search_instances_series_level)
         .service(retrieve_instance)
+        .service(retrieve_instance_metadata)
         .service(retrieve_series)
-        .service(retrieve_study);
+        .service(retrieve_series_metadata)
+        .service(retrieve_study)
+        .service(retrieve_study_metadata);
 }

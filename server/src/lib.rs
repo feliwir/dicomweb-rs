@@ -10,6 +10,8 @@ pub use filter::study_filter;
 #[cfg(feature = "actix")]
 pub mod actix;
 
+const APPLICATION_DICOM_JSON: &str = "application/dicom+json";
+
 /// QIDO-RS
 ///
 /// See https://www.dicomstandard.org/using/dicomweb/query-qido-rs for more information

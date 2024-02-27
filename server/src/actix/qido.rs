@@ -2,8 +2,9 @@ use actix_web::{get, http, web, HttpRequest, HttpResponse, Responder};
 use dicom_json::DicomJson;
 use dicom_object::InMemDicomObject;
 
-
-use crate::{DicomWebServer, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery};
+use crate::{
+    DicomWebServer, QidoInstanceQuery, QidoSeriesQuery, QidoStudyQuery, APPLICATION_DICOM_JSON,
+};
 
 #[get("/studies")]
 pub async fn search_studies_all(
@@ -18,6 +19,12 @@ pub async fn search_studies_all(
         return HttpResponse::NotAcceptable().finish();
     }
 
+    // If the Accept header is present, it must be application/dicom+json
+    if accept_header.unwrap().to_str().unwrap() != APPLICATION_DICOM_JSON {
+        return HttpResponse::NotAcceptable().finish();
+    }
+
+    // Get the matching DICOM objects from the callback
     let result = (callbacks.search_study)(&query);
 
     match result {
