@@ -1,6 +1,4 @@
-use std::{
-    io::{Write},
-};
+use std::io::Write;
 
 use actix_web::{get, web, HttpResponse, Responder};
 

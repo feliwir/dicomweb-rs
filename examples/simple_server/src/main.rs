@@ -1,5 +1,4 @@
-use std::{env, fs};
-
+use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer};
 use dicom::{
     core::{DataElement, PrimitiveValue},
@@ -12,6 +11,7 @@ use dicomweb_server::{
     INSTANCE_TAGS, SERIES_TAGS, STUDY_TAGS,
 };
 use itertools::Itertools;
+use std::{env, fs};
 use walkdir::WalkDir;
 
 const DATA_DIR: &str = "data";
@@ -352,7 +352,10 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     HttpServer::new(|| {
+        let cors = Cors::default().allow_any_origin();
+
         App::new()
+            .wrap(cors)
             .wrap(middleware::Compress::default())
             .app_data(web::Data::new(dicomweb_server::DicomWebServer {
                 search_instances: search_instances,
