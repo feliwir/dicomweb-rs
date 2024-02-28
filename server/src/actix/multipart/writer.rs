@@ -25,7 +25,7 @@ impl MultipartWriter {
     }
 
     pub fn add(self: &mut Self, mut reader: impl Read, headers: &str) -> io::Result<u64> {
-        // writer for the result
+        // writer for our buffer
         let mut writer = std::io::BufWriter::new(&mut self.data);
 
         // write the boundary
@@ -46,5 +46,16 @@ impl MultipartWriter {
 
         // write the content
         io::copy(&mut reader, &mut writer)
+    }
+
+    pub fn finish(self: &mut Self) {
+        // writer for our buffer
+        let mut writer = std::io::BufWriter::new(&mut self.data);
+
+        // write the final boundary
+        writer.write_all(b"\r\n").unwrap();
+        writer.write_all(b"--").unwrap();
+        writer.write_all(self.boundary.as_bytes()).unwrap();
+        writer.write_all(b"--").unwrap();
     }
 }

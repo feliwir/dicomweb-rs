@@ -1,9 +1,10 @@
-use std::io::Write;
+use std::{io::Write};
 
 use actix_web::{get, web, HttpResponse, Responder};
 use dicom::dictionary_std::tags;
 use dicom_json::DicomJson;
 use dicom_object::InMemDicomObject;
+use dicom_pixeldata::PixelDecoder;
 
 use crate::{actix::MultipartWriter, DicomWebServer};
 
@@ -32,6 +33,9 @@ pub async fn retrieve_study(
                     return HttpResponse::InternalServerError().body(e.to_string());
                 }
             }
+
+            // Finish the multipart stream
+            mp.finish();
 
             let content_type = format!(
                 "multipart/related; type=application/dicom; boundary={}",
@@ -94,6 +98,9 @@ pub async fn retrieve_series(
                 }
             }
 
+            // Finish the multipart stream
+            mp.finish();
+
             let content_type = format!(
                 "multipart/related; type=application/dicom; boundary={}",
                 mp.boundary
@@ -154,6 +161,9 @@ pub async fn retrieve_instance(
                 return HttpResponse::InternalServerError().body(e.to_string());
             }
 
+            // Finish the multipart stream
+            mp.finish();
+
             let content_type = format!(
                 "multipart/related; type=application/dicom; boundary={}",
                 mp.boundary
@@ -184,11 +194,53 @@ pub async fn retrieve_instance_metadata(
     }
 }
 
+#[get("/studies/{study_uid}/series/{series_uid}/instances/{instance_uid}/frames/{frame_list}")]
+pub async fn retrieve_instance_frames(
+    callbacks: web::Data<DicomWebServer>,
+    path: web::Path<(String, String, String, String)>,
+) -> impl Responder {
+    let (study_uid, series_uid, instance_uid, _frame_list) = path.into_inner();
+    let result = (callbacks.retrieve_instance)(&study_uid, &series_uid, &instance_uid);
+
+    match result {
+        Ok(dcm_file) => {
+            // TODO: use the framelist to extract the frames from the pixel data
+            if let Ok(pixel_data) = dcm_file.decode_pixel_data() {
+                let mut mp = MultipartWriter::new();
+                let mut data: Vec<u8> = Vec::new();
+
+                // Write the pixel data to memory and add it to our stream
+                if let Err(e) = data.write_all(&pixel_data.data()) {
+                    return HttpResponse::InternalServerError().body(e.to_string());
+                }
+
+                if let Err(e) = mp.add(&*data, "Content-Type: application/octet-stream") {
+                    return HttpResponse::InternalServerError().body(e.to_string());
+                }
+
+                // Finish the multipart stream
+                mp.finish();
+
+                let content_type = format!(
+                    "multipart/related; type=application/octet-stream; boundary={}",
+                    mp.boundary
+                );
+
+                return HttpResponse::Ok().content_type(content_type).body(mp.data);
+            } else {
+                return HttpResponse::InternalServerError().body("No pixel data found");
+            }
+        }
+        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+    }
+}
+
 pub fn wado_config(cfg: &mut web::ServiceConfig) {
     cfg.service(retrieve_study)
         .service(retrieve_study_metadata)
         .service(retrieve_series)
         .service(retrieve_series_metadata)
         .service(retrieve_instance)
+        .service(retrieve_instance_frames)
         .service(retrieve_instance_metadata);
 }

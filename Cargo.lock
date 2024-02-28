@@ -820,6 +820,7 @@ dependencies = [
  "dicom",
  "dicom-json",
  "dicom-object",
+ "dicom-pixeldata",
  "futures-util",
  "httparse",
  "local-waker",
