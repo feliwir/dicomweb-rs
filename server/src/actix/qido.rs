@@ -1,4 +1,8 @@
-use actix_web::{get, http, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{
+    get,
+    http::{self, header::QualityItem},
+    web, HttpRequest, HttpResponse, Responder,
+};
 use dicom_json::DicomJson;
 use dicom_object::InMemDicomObject;
 
@@ -11,16 +15,16 @@ pub async fn search_studies_all(
     request: HttpRequest,
     callbacks: web::Data<DicomWebServer>,
     query: web::Query<QidoStudyQuery>,
+    accept: web::Header<http::header::Accept>,
 ) -> impl Responder {
     // See https://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_8.7.5
     // "The response to a request without an Accept header field shall be 406 (Not Acceptable)"
-    let accept_header = request.headers().get(http::header::ACCEPT);
-    if accept_header.is_none() {
-        return HttpResponse::NotAcceptable().finish();
-    }
-
-    // If the Accept header is present, it must be application/dicom+json
-    if accept_header.unwrap().to_str().unwrap() != APPLICATION_DICOM_JSON {
+    let dicom_json_mime: mime::Mime = APPLICATION_DICOM_JSON.parse().unwrap();
+    let ranked_mimes = accept.ranked();
+    let preferred_mime = ranked_mimes
+        .iter()
+        .find(|x| **x == mime::APPLICATION_JSON || **x == dicom_json_mime);
+    if preferred_mime.is_none() {
         return HttpResponse::NotAcceptable().finish();
     }
 
@@ -47,15 +51,19 @@ pub async fn search_studies_all(
 
 #[get("/studies/{study_uid}/series")]
 pub async fn search_series_study_level(
-    request: HttpRequest,
     callbacks: web::Data<DicomWebServer>,
     study_uid: web::Path<String>,
     query: web::Query<QidoSeriesQuery>,
+    accept: web::Header<http::header::Accept>,
 ) -> impl Responder {
     // See https://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_8.7.5
     // "The response to a request without an Accept header field shall be 406 (Not Acceptable)"
-    let accept_header = request.headers().get(http::header::ACCEPT);
-    if accept_header.is_none() {
+    let dicom_json_mime: mime::Mime = APPLICATION_DICOM_JSON.parse().unwrap();
+    let ranked_mimes = accept.ranked();
+    let preferred_mime = ranked_mimes
+        .iter()
+        .find(|x| **x == mime::APPLICATION_JSON || **x == dicom_json_mime);
+    if preferred_mime.is_none() {
         return HttpResponse::NotAcceptable().finish();
     }
 
@@ -85,11 +93,16 @@ pub async fn search_instances_study_level(
     callbacks: web::Data<DicomWebServer>,
     study_uid: web::Path<String>,
     query: web::Query<QidoInstanceQuery>,
+    accept: web::Header<http::header::Accept>,
 ) -> impl Responder {
     // See https://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_8.7.5
     // "The response to a request without an Accept header field shall be 406 (Not Acceptable)"
-    let accept_header = request.headers().get(http::header::ACCEPT);
-    if accept_header.is_none() {
+    let dicom_json_mime: mime::Mime = APPLICATION_DICOM_JSON.parse().unwrap();
+    let ranked_mimes = accept.ranked();
+    let preferred_mime = ranked_mimes
+        .iter()
+        .find(|x| **x == mime::APPLICATION_JSON || **x == dicom_json_mime);
+    if preferred_mime.is_none() {
         return HttpResponse::NotAcceptable().finish();
     }
 
@@ -115,14 +128,18 @@ pub async fn search_instances_study_level(
 
 #[get("/series")]
 pub async fn search_series_all(
-    request: HttpRequest,
     callbacks: web::Data<DicomWebServer>,
     query: web::Query<QidoSeriesQuery>,
+    accept: web::Header<http::header::Accept>,
 ) -> impl Responder {
     // See https://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_8.7.5
     // "The response to a request without an Accept header field shall be 406 (Not Acceptable)"
-    let accept_header = request.headers().get(http::header::ACCEPT);
-    if accept_header.is_none() {
+    let dicom_json_mime: mime::Mime = APPLICATION_DICOM_JSON.parse().unwrap();
+    let ranked_mimes = accept.ranked();
+    let preferred_mime = ranked_mimes
+        .iter()
+        .find(|x| **x == mime::APPLICATION_JSON || **x == dicom_json_mime);
+    if preferred_mime.is_none() {
         return HttpResponse::NotAcceptable().finish();
     }
 
@@ -148,16 +165,20 @@ pub async fn search_series_all(
 
 #[get("/studies/{study_uid}/series/{series_uid}/instances")]
 pub async fn search_instances_series_level(
-    request: HttpRequest,
     callbacks: web::Data<DicomWebServer>,
     study_uid: web::Path<String>,
     series_uid: web::Path<String>,
     query: web::Query<QidoInstanceQuery>,
+    accept: web::Header<http::header::Accept>,
 ) -> impl Responder {
     // See https://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_8.7.5
     // "The response to a request without an Accept header field shall be 406 (Not Acceptable)"
-    let accept_header = request.headers().get(http::header::ACCEPT);
-    if accept_header.is_none() {
+    let dicom_json_mime: mime::Mime = APPLICATION_DICOM_JSON.parse().unwrap();
+    let ranked_mimes = accept.ranked();
+    let preferred_mime = ranked_mimes
+        .iter()
+        .find(|x| **x == mime::APPLICATION_JSON || **x == dicom_json_mime);
+    if preferred_mime.is_none() {
         return HttpResponse::NotAcceptable().finish();
     }
 
@@ -183,14 +204,18 @@ pub async fn search_instances_series_level(
 
 #[get("/instances")]
 pub async fn search_instances_all(
-    request: HttpRequest,
     callbacks: web::Data<DicomWebServer>,
     query: web::Query<QidoInstanceQuery>,
+    accept: web::Header<http::header::Accept>,
 ) -> impl Responder {
     // See https://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_8.7.5
     // "The response to a request without an Accept header field shall be 406 (Not Acceptable)"
-    let accept_header = request.headers().get(http::header::ACCEPT);
-    if accept_header.is_none() {
+    let dicom_json_mime: mime::Mime = APPLICATION_DICOM_JSON.parse().unwrap();
+    let ranked_mimes = accept.ranked();
+    let preferred_mime = ranked_mimes
+        .iter()
+        .find(|x| **x == mime::APPLICATION_JSON || **x == dicom_json_mime);
+    if preferred_mime.is_none() {
         return HttpResponse::NotAcceptable().finish();
     }
 
